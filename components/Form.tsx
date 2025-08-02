@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppStore } from '../lib/store';
 import { motion } from 'framer-motion';
 import axios from 'axios';
+import { analyzeRealtimeEmotion, getHighestWeightEmotion, emotionWeights } from '../lib/emotionMapper';
 
 interface FormData {
   fearType: string;
@@ -21,35 +22,23 @@ interface FormData {
   readyOther: string;
 }
 
-// 감정 라벨과 가중치 매핑
-const emotionLabels = {
-  '가난한, 불우한': 0.15,
-  '걱정스러운': 0.28,
-  '고립된': 0.23,
-  '괴로워하는': 0.24,
-  '당혹스러운': 0.27,
-  '두려운': 0.37,
-  '배신당한': 0.29,
-  '버려진': 0.21,
-  '불안': 0.26,
-  '상처': 0.17,
-  '스트레스 받는': 0.34,
-  '억울한': 0.22,
-  '조심스러운': 0.26,
-  '질투하는': 0.37,
-  '초조한': 0.23,
-  '충격 받은': 0.33,
-  '취약한': 0.09,
-  '혼란스러운': 0.31,
-  '회의적인': 0.16,
-  '희생된': 0.14
-};
+// 감정 라벨과 가중치 매핑 (emotionMapper.ts에서 가져옴)
+const emotionLabels = emotionWeights;
 
 export default function Form() {
   const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL;
 
   const router = useRouter();
-  const { setUserExperience } = useAppStore();
+  const { 
+    setUserExperience, 
+    setPreloadedEmotion, 
+    setIsPreloading, 
+    setRealtimeAnalysis,
+    preloadedEmotion,
+    isPreloading,
+    realtimeAnalysis
+  } = useAppStore();
+  
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState<FormData>({
     fearType: '',
@@ -67,6 +56,53 @@ export default function Form() {
   });
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<string>('');
+  const [allTextInputs, setAllTextInputs] = useState<string[]>([]);
+
+  // 실시간 감정 분석 및 프리로딩 함수
+  const performRealtimeAnalysis = useCallback(async (text: string) => {
+    if (text.length < 5) return; // 너무 짧은 텍스트는 무시
+
+    try {
+      setIsPreloading(true);
+      
+      // 실시간 감정 분석
+      const analyzedEmotion = analyzeRealtimeEmotion(text);
+      setRealtimeAnalysis(analyzedEmotion);
+      
+      // 프리로딩할 감정 설정
+      setPreloadedEmotion(analyzedEmotion);
+      
+      console.log(`실시간 분석: ${analyzedEmotion}, 가중치: ${emotionWeights[analyzedEmotion]}`);
+      
+    } catch (error) {
+      console.error('실시간 감정 분석 오류:', error);
+    } finally {
+      setIsPreloading(false);
+    }
+  }, [setIsPreloading, setRealtimeAnalysis, setPreloadedEmotion]);
+
+  // 모든 텍스트 입력을 모니터링하고 실시간 분석 수행
+  useEffect(() => {
+    const allText = [
+      formData.fearType === '기타' ? formData.fearTypeOther : formData.fearType,
+      formData.emotion === '기타' ? formData.emotionOther : formData.emotion,
+      formData.location === '기타' ? formData.locationOther : formData.location,
+      formData.fearPath,
+      formData.meaning === '기타' ? formData.meaningOther : formData.meaning,
+      formData.ready === '기타' ? formData.readyOther : formData.ready
+    ].filter(text => text && text.length > 0);
+
+    const combinedText = allText.join(' ');
+    
+    if (combinedText.length > 10) {
+      // 디바운스 적용 (500ms 후에 분석 실행)
+      const timeoutId = setTimeout(() => {
+        performRealtimeAnalysis(combinedText);
+      }, 500);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [formData, performRealtimeAnalysis]);
 
   const questions = [
     {
@@ -195,9 +231,14 @@ export default function Form() {
       [otherField]: value
     }));
 
-    // 텍스트 입력이 완료되면 감정 분석 실행
-    if (value.length > 10) {
-      await analyzeEmotion(value);
+    // 텍스트 입력이 완료되면 실시간 감정 분석 실행
+    if (value.length > 5) {
+      // 디바운스 적용 (300ms 후에 분석 실행)
+      const timeoutId = setTimeout(() => {
+        performRealtimeAnalysis(value);
+      }, 300);
+
+      return () => clearTimeout(timeoutId);
     }
   };
 
@@ -338,6 +379,40 @@ export default function Form() {
             <h2 className="text-2xl font-bold text-white mb-6 font-mono">
               {currentQuestion.question}
             </h2>
+
+            {/* 실시간 분석 결과 표시 */}
+            {(isPreloading || realtimeAnalysis) && (
+              <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-6 p-4 bg-red-900/20 border border-red-500/30 rounded-lg"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="text-red-400 text-sm font-mono">
+                    {isPreloading ? (
+                      <span className="flex items-center">
+                        <span className="animate-spin mr-2">🔄</span>
+                        실시간 감정 분석 중...
+                      </span>
+                    ) : (
+                      <span>
+                        실시간 분석: <span className="text-white font-bold">{realtimeAnalysis}</span>
+                      </span>
+                    )}
+                  </div>
+                  {realtimeAnalysis && !isPreloading && (
+                    <div className="text-gray-400 text-xs">
+                      가중치: {emotionLabels[realtimeAnalysis as keyof typeof emotionLabels]?.toFixed(2) || 'N/A'}
+                    </div>
+                  )}
+                </div>
+                {preloadedEmotion && !isPreloading && (
+                  <div className="mt-2 text-green-400 text-xs font-mono">
+                    프리로딩 중: {preloadedEmotion} 맵
+                  </div>
+                )}
+              </motion.div>
+            )}
 
             {/* 입력 필드 */}
             {currentQuestion.type === 'text' && (

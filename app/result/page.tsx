@@ -134,7 +134,7 @@ function ResultContent() {
               다시 시작하기
             </CTAButton>
             <CTAButton href="/" variant="secondary" icon="arrow-left">
-              홈으로 돌아가기
+              공포와 마주하기
             </CTAButton>
           </motion.div>
         </div>

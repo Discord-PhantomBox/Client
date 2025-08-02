@@ -29,6 +29,89 @@ export interface SceneConfig {
   message: string
 }
 
+// 감정별 가중치 정의 (Form.tsx와 동일)
+export const emotionWeights: Record<Emotion, number> = {
+  '가난한, 불우한': 0.15,
+  '걱정스러운': 0.28,
+  '고립된': 0.23,
+  '괴로워하는': 0.24,
+  '당혹스러운': 0.27,
+  '두려운': 0.37,
+  '배신당한': 0.29,
+  '버려진': 0.21,
+  '불안': 0.26,
+  '상처': 0.17,
+  '스트레스 받는': 0.34,
+  '억울한': 0.22,
+  '조심스러운': 0.26,
+  '질투하는': 0.37,
+  '초조한': 0.23,
+  '충격 받은': 0.33,
+  '취약한': 0.09,
+  '혼란스러운': 0.31,
+  '회의적인': 0.16,
+  '희생된': 0.14
+};
+
+// 실시간 감정 분석 함수
+export const analyzeRealtimeEmotion = (text: string): Emotion => {
+  // 간단한 키워드 기반 감정 분석
+  const keywords: Record<string, Emotion[]> = {
+    '두려워': ['두려운', '불안', '초조한'],
+    '무서워': ['두려운', '충격 받은'],
+    '외로워': ['고립된', '버려진'],
+    '배신': ['배신당한', '상처'],
+    '질투': ['질투하는'],
+    '불안': ['불안', '걱정스러운'],
+    '스트레스': ['스트레스 받는'],
+    '혼란': ['혼란스러운', '당혹스러운'],
+    '상처': ['상처', '괴로워하는'],
+    '취약': ['취약한'],
+    '희생': ['희생된'],
+    '가난': ['가난한, 불우한'],
+    '억울': ['억울한'],
+    '조심': ['조심스러운'],
+    '회의': ['회의적인']
+  };
+
+  const lowerText = text.toLowerCase();
+  const detectedEmotions: Emotion[] = [];
+
+  // 키워드 매칭
+  for (const [keyword, emotions] of Object.entries(keywords)) {
+    if (lowerText.includes(keyword)) {
+      detectedEmotions.push(...emotions);
+    }
+  }
+
+  // 감정이 감지되면 가중치가 가장 높은 것을 반환
+  if (detectedEmotions.length > 0) {
+    const emotionWithWeights = detectedEmotions.map(emotion => ({
+      emotion,
+      weight: emotionWeights[emotion]
+    }));
+    
+    emotionWithWeights.sort((a, b) => b.weight - a.weight);
+    return emotionWithWeights[0].emotion;
+  }
+
+  // 감지되지 않으면 기본값
+  return '두려운';
+};
+
+// 가장 높은 가중치의 감정 찾기
+export const getHighestWeightEmotion = (emotions: Emotion[]): Emotion => {
+  if (emotions.length === 0) return '두려운';
+  
+  const emotionWithWeights = emotions.map(emotion => ({
+    emotion,
+    weight: emotionWeights[emotion]
+  }));
+  
+  emotionWithWeights.sort((a, b) => b.weight - a.weight);
+  return emotionWithWeights[0].emotion;
+};
+
 export const emotionToScene: Record<Emotion, SceneConfig> = {
   '가난한, 불우한': {
     name: '빈곤한 거리',

@@ -3,6 +3,8 @@ import { motion } from 'framer-motion';
 import { useAppStore } from '../lib/store';
 import { getSceneByEmotion } from '../lib/emotionMapper';
 import { useRouter } from 'next/navigation';
+import Header from './Header';
+import Footer from './Footer';
 
 export default function Hero() {
   const router = useRouter();
@@ -25,6 +27,7 @@ export default function Hero() {
 
   return (
     <div className="min-h-screen bg-black relative overflow-hidden">
+      <Header />
       {/* 무채색 배경 효과 */}
       <div className="absolute inset-0">
         {/* 어두운 그라데이션 */}
@@ -120,7 +123,7 @@ export default function Hero() {
                 onClick={handleStartExperience}
                 className="px-8 py-4 bg-red-900/50 text-red-300 border-2 border-red-700 rounded-lg font-mono text-lg hover:bg-red-800/50 hover:border-red-600 transition-all duration-300 shadow-lg hover:shadow-red-500/20"
               >
-                두려움 마주하러 가기
+                두려움과 맞서기
               </motion.button>
             ) : (
               // 감정 매핑이 없는 경우
@@ -360,6 +363,7 @@ export default function Hero() {
           </div>
         </section>
       </div>
+      <Footer />
     </div>
   );
 } 

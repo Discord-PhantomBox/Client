@@ -1,0 +1,11 @@
+Model Information:
+* title:	Red Room Test2
+* source:	https://sketchfab.com/3d-models/red-room-test2-649a32802b6a4754a4eec8271f9b0258
+* author:	angeliquejoy (https://sketchfab.com/angeliquejoy)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Red Room Test2" (https://sketchfab.com/3d-models/red-room-test2-649a32802b6a4754a4eec8271f9b0258) by angeliquejoy (https://sketchfab.com/angeliquejoy) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
