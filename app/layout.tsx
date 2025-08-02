@@ -1,21 +1,30 @@
-import type { Metadata } from "next";
-import "./globals.css";
+import type { Metadata } from 'next'
+import { Inter } from 'next/font/google'
+import './globals.css'
+import Header from '../components/Header'
+import Footer from '../components/Footer'
+
+const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: "공포의 기억을 걷는 - 회고 서비스",
-  description: "당신의 무서웠던 경험을 3D 공간에서 회고하는 인터랙티브 서비스",
-};
+  title: 'Phantom Box - 당신의 가장 무서운 기억을 담는 곳',
+  description: '폐병원의 분위기에서 마주하는 자신의 감정과 기억들을 통해, 더 나은 내일을 위한 회고의 시간을 가져보세요.',
+}
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: {
+  children: React.ReactNode
+}) {
   return (
-    <html lang="ko" className="dark">
-      <body className="font-pretendard bg-black text-white antialiased">
-        {children}
+    <html lang="ko">
+      <body className={inter.className}>
+        <Header />
+        <main className="">
+          {children}
+        </main>
+        <Footer />
       </body>
     </html>
-  );
+  )
 }

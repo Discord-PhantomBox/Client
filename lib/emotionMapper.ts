@@ -1,4 +1,25 @@
-import { Emotion } from './store'
+// 감정 타입 정의
+export type Emotion = 
+  | '가난한, 불우한'
+  | '걱정스러운'
+  | '고립된'
+  | '괴로워하는'
+  | '당혹스러운'
+  | '두려운'
+  | '배신당한'
+  | '버려진'
+  | '불안'
+  | '상처'
+  | '스트레스 받는'
+  | '억울한'
+  | '조심스러운'
+  | '질투하는'
+  | '초조한'
+  | '충격 받은'
+  | '취약한'
+  | '혼란스러운'
+  | '회의적인'
+  | '희생된';
 
 export interface SceneConfig {
   name: string
@@ -9,54 +30,145 @@ export interface SceneConfig {
 }
 
 export const emotionToScene: Record<Emotion, SceneConfig> = {
-  '공포': {
-    name: '어두운 숲',
-    description: '깊고 어두운 숲속, 나뭇가지가 으스스하게 흔들린다',
+  '가난한, 불우한': {
+    name: '빈곤한 거리',
+    description: '빈곤과 절망이 가득한 어두운 거리',
+    color: '#2f2f2f',
+    particles: 20,
+    message: '당신은 이 빈곤을 마주했습니다.'
+  },
+  '걱정스러운': {
+    name: '불안의 미로',
+    description: '끝없이 이어지는 걱정의 미로',
+    color: '#4a4a4a',
+    particles: 35,
+    message: '당신은 이 걱정을 마주했습니다.'
+  },
+  '고립된': {
+    name: '외톨이의 방',
+    description: '깊은 고립감이 가득한 방',
     color: '#1a1a1a',
-    particles: 50,
+    particles: 15,
+    message: '당신은 이 고립을 마주했습니다.'
+  },
+  '괴로워하는': {
+    name: '고통의 공간',
+    description: '끝없는 괴로움이 가득한 공간',
+    color: '#3a3a3a',
+    particles: 40,
+    message: '당신은 이 괴로움을 마주했습니다.'
+  },
+  '당혹스러운': {
+    name: '혼란의 폭풍',
+    description: '갑작스러운 혼란의 폭풍',
+    color: '#5a5a5a',
+    particles: 60,
+    message: '당신은 이 당혹을 마주했습니다.'
+  },
+  '두려운': {
+    name: '공포의 어둠',
+    description: '깊고 어두운 공포의 공간',
+    color: '#000000',
+    particles: 80,
     message: '당신은 이 공포를 마주했습니다.'
   },
-  '분노': {
-    name: '붉은 폭풍',
-    description: '붉은 번개가 치는 폭풍우 속',
+  '배신당한': {
+    name: '배신의 상처',
+    description: '깊은 배신감이 가득한 공간',
     color: '#8b0000',
-    particles: 80,
-    message: '당신은 이 분노를 마주했습니다.'
+    particles: 50,
+    message: '당신은 이 배신을 마주했습니다.'
   },
-  '슬픔': {
-    name: '비오는 거리',
-    description: '빗방울이 떨어지는 어두운 거리',
-    color: '#2f4f4f',
-    particles: 30,
-    message: '당신은 이 슬픔을 마주했습니다.'
+  '버려진': {
+    name: '버림받은 곳',
+    description: '깊은 외로움이 가득한 공간',
+    color: '#2a2a2a',
+    particles: 25,
+    message: '당신은 이 버림을 마주했습니다.'
   },
   '불안': {
-    name: '미로',
-    description: '끝없이 이어지는 미로',
-    color: '#696969',
-    particles: 40,
+    name: '불안의 미로',
+    description: '끝없는 불안이 가득한 미로',
+    color: '#4a4a4a',
+    particles: 45,
     message: '당신은 이 불안을 마주했습니다.'
   },
-  '혐오': {
-    name: '오염된 공간',
-    description: '독성 물질이 가득한 공간',
-    color: '#556b2f',
-    particles: 60,
-    message: '당신은 이 혐오를 마주했습니다.'
+  '상처': {
+    name: '상처의 공간',
+    description: '깊은 상처가 가득한 공간',
+    color: '#6a6a6a',
+    particles: 30,
+    message: '당신은 이 상처를 마주했습니다.'
   },
-  '놀람': {
-    name: '빛의 폭발',
-    description: '갑작스러운 빛의 폭발',
-    color: '#ffd700',
-    particles: 100,
-    message: '당신은 이 놀람을 마주했습니다.'
+  '스트레스 받는': {
+    name: '압박의 공간',
+    description: '강한 압박감이 가득한 공간',
+    color: '#5a5a5a',
+    particles: 55,
+    message: '당신은 이 스트레스를 마주했습니다.'
   },
-  '기쁨': {
-    name: '별들의 축제',
-    description: '반짝이는 별들이 춤추는 공간',
-    color: '#ff69b4',
-    particles: 120,
-    message: '당신은 이 기쁨을 마주했습니다.'
+  '억울한': {
+    name: '억울함의 공간',
+    description: '깊은 억울함이 가득한 공간',
+    color: '#7a7a7a',
+    particles: 40,
+    message: '당신은 이 억울함을 마주했습니다.'
+  },
+  '조심스러운': {
+    name: '경계의 공간',
+    description: '끊임없는 경계심이 가득한 공간',
+    color: '#4a4a4a',
+    particles: 35,
+    message: '당신은 이 경계를 마주했습니다.'
+  },
+  '질투하는': {
+    name: '질투의 불길',
+    description: '녹색 불길이 치솟는 공간',
+    color: '#228b22',
+    particles: 70,
+    message: '당신은 이 질투를 마주했습니다.'
+  },
+  '초조한': {
+    name: '초조의 공간',
+    description: '끊임없는 초조함이 가득한 공간',
+    color: '#5a5a5a',
+    particles: 50,
+    message: '당신은 이 초조를 마주했습니다.'
+  },
+  '충격 받은': {
+    name: '충격의 폭발',
+    description: '갑작스러운 충격의 폭발',
+    color: '#ff4500',
+    particles: 90,
+    message: '당신은 이 충격을 마주했습니다.'
+  },
+  '취약한': {
+    name: '취약함의 공간',
+    description: '깊은 취약함이 가득한 공간',
+    color: '#3a3a3a',
+    particles: 20,
+    message: '당신은 이 취약함을 마주했습니다.'
+  },
+  '혼란스러운': {
+    name: '혼란의 소용돌이',
+    description: '끊임없이 회전하는 혼란의 소용돌이',
+    color: '#6a6a6a',
+    particles: 65,
+    message: '당신은 이 혼란을 마주했습니다.'
+  },
+  '회의적인': {
+    name: '회의의 공간',
+    description: '깊은 회의가 가득한 공간',
+    color: '#4a4a4a',
+    particles: 30,
+    message: '당신은 이 회의를 마주했습니다.'
+  },
+  '희생된': {
+    name: '희생의 공간',
+    description: '깊은 희생이 가득한 공간',
+    color: '#2a2a2a',
+    particles: 25,
+    message: '당신은 이 희생을 마주했습니다.'
   }
 }
 

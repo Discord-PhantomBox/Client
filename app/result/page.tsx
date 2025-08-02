@@ -5,6 +5,10 @@ import { useAppStore } from '../../lib/store'
 import CTAButton from '../../components/CTAButton'
 
 export default function ResultPage() {
+  return <ResultContent />
+}
+
+function ResultContent() {
   const userExperience = useAppStore((state) => state.userExperience)
   const reset = useAppStore((state) => state.reset)
 
@@ -48,32 +52,60 @@ export default function ResultPage() {
             <div className="w-24 h-1 bg-gradient-to-r from-blood-500 to-eerie-500 mx-auto rounded"></div>
           </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="space-y-6 text-left"
-          >
-            <div className="bg-black/30 rounded-lg p-4 border border-blood-500/20">
-              <h3 className="text-blood-400 font-medium mb-2">기록한 기억</h3>
-              <p className="text-white/80">{userExperience.memory}</p>
-            </div>
+                                <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.4 }}
+                        className="space-y-6 text-left"
+                      >
 
             <div className="grid grid-cols-2 gap-4">
+              <div className="bg-black/30 rounded-lg p-4 border border-blood-500/20">
+                <h3 className="text-blood-400 font-medium mb-2">공포 유형</h3>
+                <p className="text-white/80">{userExperience.fearType}</p>
+              </div>
               <div className="bg-black/30 rounded-lg p-4 border border-blood-500/20">
                 <h3 className="text-blood-400 font-medium mb-2">주요 감정</h3>
                 <p className="text-white/80">{userExperience.emotion}</p>
               </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
               <div className="bg-black/30 rounded-lg p-4 border border-blood-500/20">
                 <h3 className="text-blood-400 font-medium mb-2">감정 강도</h3>
                 <p className="text-white/80">{userExperience.intensity}/10</p>
               </div>
-            </div>
-
-            {userExperience.location && (
               <div className="bg-black/30 rounded-lg p-4 border border-blood-500/20">
                 <h3 className="text-blood-400 font-medium mb-2">장소</h3>
                 <p className="text-white/80">{userExperience.location}</p>
+              </div>
+            </div>
+
+            {userExperience.fearPath && (
+              <div className="bg-black/30 rounded-lg p-4 border border-blood-500/20">
+                <h3 className="text-blood-400 font-medium mb-2">공포의 경로</h3>
+                <p className="text-white/80">{userExperience.fearPath}</p>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-black/30 rounded-lg p-4 border border-blood-500/20">
+                <h3 className="text-blood-400 font-medium mb-2">경험의 의미</h3>
+                <p className="text-white/80">{userExperience.meaning}</p>
+              </div>
+              <div className="bg-black/30 rounded-lg p-4 border border-blood-500/20">
+                <h3 className="text-blood-400 font-medium mb-2">재마주 준비</h3>
+                <p className="text-white/80">{userExperience.ready}</p>
+              </div>
+            </div>
+
+            {userExperience.analyzedEmotion && (
+              <div className="bg-black/30 rounded-lg p-4 border border-blood-500/20">
+                <h3 className="text-blood-400 font-medium mb-2">AI 감정 분석 결과</h3>
+                <p className="text-white/80 font-bold text-lg">{userExperience.analyzedEmotion}</p>
+                <p className="text-gray-400 text-sm mt-2">
+                  이 감정에 맞는 3D 환경이 준비되었습니다.
+                </p>
               </div>
             )}
           </motion.div>

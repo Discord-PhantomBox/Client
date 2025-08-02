@@ -1,359 +1,332 @@
 'use client';
-
-import { useRef, useEffect, useState } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
-import { useGLTF } from '@react-three/drei';
+import { useRef, useState, useEffect } from 'react';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { useGLTF, OrbitControls, Environment } from '@react-three/drei';
 import * as THREE from 'three';
+import { useAppStore } from '../lib/store';
+import { getSceneByEmotion } from '../lib/emotionMapper';
 
-// GLTF 모델 컴포넌트
 function BuildingHallway() {
-  const gltf = useGLTF('/building_hallway/scene.gltf');
-  const modelRef = useRef<THREE.Group>(null);
-
+  const { scene } = useGLTF('/building_hallway/scene.gltf');
+  
   useEffect(() => {
-    if (modelRef.current) {
-      // 90도 회전 (Y축 기준)
-      modelRef.current.rotation.y = Math.PI / 2;
-      
-      // 모델 크기 조정
-      modelRef.current.scale.setScalar(1);
-      
-      // 모델 위치 조정
-      modelRef.current.position.set(0, 0, 0);
-    }
-  }, []);
+    // 모델을 90도 회전
+    scene.rotation.y = Math.PI / 2;
+  }, [scene]);
 
-  return (
-    <primitive 
-      ref={modelRef}
-      object={gltf.scene} 
-    />
-  );
+  return <primitive object={scene} />;
 }
 
-// 충돌 감지 유틸리티
-function checkCollision(position: THREE.Vector3, bounds: { x: number, z: number }): THREE.Vector3 {
-  const newPosition = position.clone();
-  
-  // 맵 경계 체크 (매우 큰 값으로 설정하여 사실상 제한 없음)
-  if (Math.abs(newPosition.x) > bounds.x) {
-    newPosition.x = Math.sign(newPosition.x) * bounds.x;
-  }
-  if (Math.abs(newPosition.z) > bounds.z) {
-    newPosition.z = Math.sign(newPosition.z) * bounds.z;
-  }
-  
-  // 건물 내부 영역 제한 제거 (매우 큰 값으로 설정)
-  const hallwayWidth = 10000;
-  const hallwayLength = 10000;
-  
-  // 복도 영역 밖으로 나가지 못하도록 제한 (사실상 제한 없음)
-  if (Math.abs(newPosition.x) > hallwayWidth) {
-    newPosition.x = Math.sign(newPosition.x) * hallwayWidth;
-  }
-  
-  if (Math.abs(newPosition.z) > hallwayLength) {
-    newPosition.z = Math.sign(newPosition.z) * hallwayLength;
-  }
-  
-  return newPosition;
-}
-
-// 플레이어 컴포넌트
-function Player({ position, onPositionChange }: { 
-  position: THREE.Vector3; 
-  onPositionChange: (pos: THREE.Vector3) => void;
-}) {
-  const playerRef = useRef<THREE.Mesh>(null);
-  const velocity = useRef(new THREE.Vector3());
-  const keys = useRef<Set<string>>(new Set());
-  const isOnGround = useRef(true);
-  const isCrouching = useRef(false);
-  const isRunning = useRef(false);
-  const mouseRef = useRef({ x: 0, y: 0 });
-  const rotationRef = useRef({ x: 0, y: 0 });
-
-  // 키 입력 처리
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      keys.current.add(event.code);
-      
-      // 점프
-      if (event.code === 'Space' && isOnGround.current) {
-        velocity.current.y = 35;
-        isOnGround.current = false;
-      }
-      
-      // 앉기
-      if (event.code === 'ControlLeft' || event.code === 'ControlRight') {
-        isCrouching.current = true;
-      }
-      
-      // 달리기
-      if (event.code === 'ShiftLeft' || event.code === 'ShiftRight') {
-        isRunning.current = true;
-      }
-      
-      // 상호작용
-      if (event.code === 'KeyF') {
-        console.log('상호작용!');
-      }
-    };
-
-    const handleKeyUp = (event: KeyboardEvent) => {
-      keys.current.delete(event.code);
-      
-      // 앉기 해제
-      if (event.code === 'ControlLeft' || event.code === 'ControlRight') {
-        isCrouching.current = false;
-      }
-      
-      // 달리기 해제
-      if (event.code === 'ShiftLeft' || event.code === 'ShiftRight') {
-        isRunning.current = false;
-      }
-    };
-
-    // 마우스 움직임 처리
-    const handleMouseMove = (event: MouseEvent) => {
-      const sensitivity = 0.002;
-      mouseRef.current.x += event.movementX * sensitivity;
-      mouseRef.current.y += event.movementY * sensitivity;
-      
-      // 수직 회전 제한
-      mouseRef.current.y = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, mouseRef.current.y));
-    };
-
-    // 마우스 포인터 잠금
-    const handleClick = () => {
-      document.body.requestPointerLock();
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('click', handleClick);
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('click', handleClick);
-    };
-  }, []);
-
-  useFrame((state, delta) => {
-    if (!playerRef.current) return;
-
-    const speed = isRunning.current ? 70 : 40;
-    const moveSpeed = isCrouching.current ? speed * 0.5 : speed;
-    
-    // 이동 처리 (카메라 방향 기준)
-    const moveVector = new THREE.Vector3();
-    
-    // 전후 이동 (W/S)
-    if (keys.current.has('KeyW')) moveVector.z -= 1;
-    if (keys.current.has('KeyS')) moveVector.z += 1;
-    
-    // 좌우 이동 (A/D)
-    if (keys.current.has('KeyA')) moveVector.x -= 1;
-    if (keys.current.has('KeyD')) moveVector.x += 1;
-    
-    // 벡터가 0이 아닐 때만 정규화
-    if (moveVector.length() > 0) {
-      moveVector.normalize();
-    }
-    moveVector.multiplyScalar(moveSpeed * delta);
-    
-    // 카메라 회전에 따른 이동 방향 조정
-    const rotationMatrix = new THREE.Matrix4();
-    rotationMatrix.makeRotationY(-mouseRef.current.x);
-    moveVector.applyMatrix4(rotationMatrix);
-    
-    // 새로운 위치 계산
-    const newPosition = position.clone().add(moveVector);
-    
-    // 중력 적용
-    velocity.current.y -= 25 * delta;
-    newPosition.y += velocity.current.y * delta;
-    
-    // 바닥 충돌 체크
-    if (newPosition.y < 50) {
-      newPosition.y = 50;
-      velocity.current.y = 0;
-      isOnGround.current = true;
-    }
-    
-    // 천장 충돌 체크
-    if (newPosition.y > 60) {
-      newPosition.y = 60;
-      velocity.current.y = 0;
-    }
-    
-    // 충돌 감지 및 위치 조정
-    const adjustedPosition = checkCollision(newPosition, { x: 10000, z: 10000 });
-    onPositionChange(adjustedPosition);
-  });
-
+function Player({ position, velocity }: { position: THREE.Vector3; velocity: THREE.Vector3 }) {
   return (
-    <mesh ref={playerRef} position={position} visible={false}>
-      <boxGeometry args={[0.5, isCrouching.current ? 0.5 : 1, 0.5]} />
+    <mesh position={position} visible={false}>
+      <boxGeometry args={[1, 2, 1]} />
       <meshStandardMaterial color="red" />
     </mesh>
   );
 }
 
-// 메인 SceneViewer 컴포넌트
-export default function SceneViewer() {
-  const [playerPosition, setPlayerPosition] = useState(new THREE.Vector3(5.23, 40, 518.87));
+function FollowCamera({ playerPosition }: { playerPosition: THREE.Vector3 }) {
+  const { camera } = useThree();
+  
+  useEffect(() => {
+    camera.position.set(playerPosition.x, playerPosition.y + 10.0, playerPosition.z + 5);
+    camera.lookAt(playerPosition);
+  }, [camera, playerPosition]);
+
+  return null;
+}
+
+function EmotionBasedLighting() {
+  const userExperience = useAppStore((state) => state.userExperience);
+  
+  // 감정 분석 결과가 있으면 해당 씬 설정 적용
+  const sceneConfig = userExperience?.analyzedEmotion ? 
+    getSceneByEmotion(userExperience.analyzedEmotion as any, userExperience.intensity) : null;
 
   return (
-    <div className="w-full h-screen">
-      <Canvas
-        camera={{ position: [0, 50, 0], fov: 90 }}
-        shadows
-      >
-        {/* 조명 */}
-        <ambientLight intensity={0.2} />
-        <directionalLight
-          position={[10, 10, 5]}
-          intensity={0.5}
-          castShadow
-          shadow-mapSize-width={2048}
-          shadow-mapSize-height={2048}
-        />
-        
-        {/* 복도 조명 (가로등 효과) */}
-        <pointLight
-          position={[0, 35, 0]}
-          intensity={5.0}
-          distance={30}
-          castShadow
-          shadow-mapSize-width={1024}
-          shadow-mapSize-height={1024}
-        />
-        
-        {/* 추가 조명들 */}
-        <pointLight
-          position={[0, 35, 20]}
-          intensity={4.0}
-          distance={25}
-          castShadow
-        />
-        
-        <pointLight
-          position={[0, 35, -20]}
-          intensity={4.0}
-          distance={25}
-          castShadow
-        />
-        
-        {/* 바닥 */}
-        {/* <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.1, 0]} receiveShadow>
-          <planeGeometry args={[50, 50]} />
-          <meshStandardMaterial color="#444" />
-        </mesh> */}
-        
-        {/* 건물 모델 */}
-        <BuildingHallway />
-        
-        {/* 플레이어 */}
-        <Player 
-          position={playerPosition} 
-          onPositionChange={setPlayerPosition}
-        />
-        
-        {/* 카메라가 플레이어를 따라가도록 */}
-        <FollowCamera target={playerPosition} />
-        
-        {/* 맵 경계 표시 (디버그용) */}
-        <MapBoundaries />
-      </Canvas>
+    <>
+      {/* 기본 조명 */}
+      <ambientLight intensity={0.1} />
+      <directionalLight 
+        position={[10, 10, 5]} 
+        intensity={0.3} 
+        castShadow 
+        shadow-mapSize-width={2048}
+        shadow-mapSize-height={2048}
+      />
       
-      {/* 컨트롤 안내 */}
-      <div className="absolute bottom-4 left-4 text-white bg-black bg-opacity-50 p-4 rounded">
-        <h3 className="font-bold mb-2">컨트롤:</h3>
-        <p>WASD - 이동</p>
-        <p>Space - 점프</p>
-        <p>Ctrl - 앉기</p>
-        <p>Shift - 달리기</p>
-        <p>F - 상호작용</p>
-        <p>마우스 - 카메라 회전</p>
-        <p>클릭 - 마우스 잠금</p>
+      {/* 감정 기반 동적 조명 */}
+      {sceneConfig && (
+        <>
+          {/* 감정 색상 기반 포인트 라이트 */}
+          <pointLight
+            position={[0, 5, 0]}
+            intensity={sceneConfig.particles / 20}
+            color={sceneConfig.color}
+            distance={20}
+          />
+          
+          {/* 추가 분위기 조명 */}
+          <pointLight
+            position={[10, 3, 10]}
+            intensity={0.5}
+            color={sceneConfig.color}
+            distance={15}
+          />
+          
+          <pointLight
+            position={[-10, 3, -10]}
+            intensity={0.3}
+            color={sceneConfig.color}
+            distance={15}
+          />
+        </>
+      )}
+      
+      {/* 기본 폐병원 조명 (감정 분석이 없는 경우) */}
+      {!sceneConfig && (
+        <>
+          <pointLight position={[0, 5, 0]} intensity={0.8} color="#8b0000" distance={20} />
+          <pointLight position={[10, 3, 10]} intensity={0.5} color="#4a4a4a" distance={15} />
+          <pointLight position={[-10, 3, -10]} intensity={0.3} color="#2a2a2a" distance={15} />
+        </>
+      )}
+    </>
+  );
+}
+
+function EmotionParticles() {
+  const userExperience = useAppStore((state) => state.userExperience);
+  const sceneConfig = userExperience?.analyzedEmotion ? 
+    getSceneByEmotion(userExperience.analyzedEmotion as any, userExperience.intensity) : null;
+  
+  const particlesRef = useRef<THREE.Points>(null);
+  
+  useEffect(() => {
+    if (!particlesRef.current) return;
+    
+    const geometry = new THREE.BufferGeometry();
+    const particleCount = sceneConfig?.particles || 50;
+    const positions = new Float32Array(particleCount * 3);
+    
+    for (let i = 0; i < particleCount * 3; i += 3) {
+      positions[i] = (Math.random() - 0.5) * 100;
+      positions[i + 1] = Math.random() * 50;
+      positions[i + 2] = (Math.random() - 0.5) * 100;
+    }
+    
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    
+    if (particlesRef.current.geometry) {
+      particlesRef.current.geometry.dispose();
+    }
+    particlesRef.current.geometry = geometry;
+  }, [sceneConfig]);
+  
+  useFrame((state) => {
+    if (particlesRef.current) {
+      particlesRef.current.rotation.y += 0.001;
+      particlesRef.current.rotation.x += 0.0005;
+    }
+  });
+  
+  if (!sceneConfig) return null;
+  
+  return (
+    <points ref={particlesRef}>
+      <bufferGeometry />
+      <pointsMaterial
+        size={0.5}
+        color={sceneConfig.color}
+        transparent
+        opacity={0.6}
+        sizeAttenuation
+      />
+    </points>
+  );
+}
+
+export default function SceneViewer() {
+  const [playerPosition, setPlayerPosition] = useState(new THREE.Vector3(5.23, 40, 518.87));
+  const [velocity, setVelocity] = useState(new THREE.Vector3());
+  const [keys, setKeys] = useState<Set<string>>(new Set());
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [isPointerLocked, setIsPointerLocked] = useState(false);
+  
+  const userExperience = useAppStore((state) => state.userExperience);
+  const sceneConfig = userExperience?.analyzedEmotion ? 
+    getSceneByEmotion(userExperience.analyzedEmotion as any, userExperience.intensity) : null;
+
+  // 키보드 이벤트
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      setKeys(prev => new Set(prev).add(e.code));
+    };
+    
+    const handleKeyUp = (e: KeyboardEvent) => {
+      setKeys(prev => {
+        const newKeys = new Set(prev);
+        newKeys.delete(e.code);
+        return newKeys;
+      });
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, []);
+
+  // 마우스 이벤트
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isPointerLocked) {
+        setMousePosition(prev => ({
+          x: prev.x + e.movementX * 0.002,
+          y: prev.y + e.movementY * 0.002
+        }));
+      }
+    };
+    
+    const handlePointerLockChange = () => {
+      setIsPointerLocked(document.pointerLockElement !== null);
+    };
+    
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('pointerlockchange', handlePointerLockChange);
+    
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('pointerlockchange', handlePointerLockChange);
+    };
+  }, [isPointerLocked]);
+
+  // 클릭 시 포인터 락
+  const handleCanvasClick = () => {
+    const canvas = document.querySelector('canvas');
+    if (canvas && !isPointerLocked) {
+      canvas.requestPointerLock();
+    }
+  };
+
+  // 플레이어 이동 로직
+  useFrame(() => {
+    const speed = 0.5;
+    const jumpSpeed = 0.8;
+    const gravity = -0.02;
+    
+    const newVelocity = velocity.clone();
+    const newPosition = playerPosition.clone();
+    
+    // 중력 적용
+    newVelocity.y += gravity;
+    
+    // 키보드 입력 처리
+    const moveVector = new THREE.Vector3();
+    
+    if (keys.has('KeyW')) moveVector.z -= 1;
+    if (keys.has('KeyS')) moveVector.z += 1;
+    if (keys.has('KeyA')) moveVector.x -= 1;
+    if (keys.has('KeyD')) moveVector.x += 1;
+    
+    // 카메라 방향에 따른 이동
+    if (moveVector.length() > 0) {
+      moveVector.normalize();
+      moveVector.multiplyScalar(speed);
+      
+      // 마우스 회전에 따른 이동 방향 조정
+      const angle = mousePosition.x;
+      const cos = Math.cos(angle);
+      const sin = Math.sin(angle);
+      
+      const adjustedMoveVector = new THREE.Vector3(
+        moveVector.x * cos - moveVector.z * sin,
+        0,
+        moveVector.x * sin + moveVector.z * cos
+      );
+      
+      newPosition.add(adjustedMoveVector);
+    }
+    
+    // 점프
+    if (keys.has('Space') && newPosition.y <= 40.1) {
+      newVelocity.y = jumpSpeed;
+    }
+    
+    // 위치 업데이트
+    newPosition.add(newVelocity);
+    
+    // 바닥 충돌
+    if (newPosition.y < 40) {
+      newPosition.y = 40;
+      newVelocity.y = 0;
+    }
+    
+    // 천장 충돌
+    if (newPosition.y > 80) {
+      newPosition.y = 80;
+      newVelocity.y = 0;
+    }
+    
+    setPlayerPosition(newPosition);
+    setVelocity(newVelocity);
+  });
+
+  return (
+    <div className="w-full h-screen relative">
+      {/* 감정 메시지 표시 */}
+      {sceneConfig && (
+        <div className="absolute top-4 left-4 z-10 bg-black/60 backdrop-blur-md border border-gray-700/50 rounded-lg p-4 text-white font-mono">
+          <h3 className="text-lg font-bold mb-2">{sceneConfig.name}</h3>
+          <p className="text-sm text-gray-300">{sceneConfig.message}</p>
+        </div>
+      )}
+      
+      {/* 좌표 디버그 */}
+      <div className="absolute top-4 right-4 z-10 bg-black/60 backdrop-blur-md border border-gray-700/50 rounded-lg p-4 text-white font-mono text-sm">
+        <div>X: {playerPosition.x.toFixed(2)}</div>
+        <div>Y: {playerPosition.y.toFixed(2)}</div>
+        <div>Z: {playerPosition.z.toFixed(2)}</div>
+        {sceneConfig && (
+          <div className="mt-2 text-red-400">
+            감정: {userExperience?.analyzedEmotion}
+          </div>
+        )}
       </div>
       
-      {/* 디버그 좌표 표시 */}
-      <div className="absolute top-4 right-4 text-white bg-black bg-opacity-50 p-4 rounded font-mono">
-        <h3 className="font-bold mb-2">좌표:</h3>
-        <p>X: {playerPosition.x.toFixed(2)}</p>
-        <p>Y: {playerPosition.y.toFixed(2)}</p>
-        <p>Z: {playerPosition.z.toFixed(2)}</p>
+      <Canvas
+        shadows
+        camera={{ position: [0, 10, 5], fov: 75 }}
+        onClick={handleCanvasClick}
+        className="cursor-crosshair"
+      >
+        <EmotionBasedLighting />
+        <EmotionParticles />
+        
+        <BuildingHallway />
+        <Player position={playerPosition} velocity={velocity} />
+        <FollowCamera playerPosition={playerPosition} />
+        
+        {/* 바닥 */}
+        <mesh position={[0, 39, 0]} receiveShadow>
+          <planeGeometry args={[1000, 1000]} />
+          <meshStandardMaterial color="#2a2a2a" />
+        </mesh>
+        
+        <Environment preset="night" />
+      </Canvas>
+      
+      {/* 조작 가이드 */}
+      <div className="absolute bottom-4 left-4 z-10 bg-black/60 backdrop-blur-md border border-gray-700/50 rounded-lg p-4 text-white font-mono text-sm">
+        <div>WASD: 이동</div>
+        <div>Space: 점프</div>
+        <div>마우스: 시점</div>
+        <div>클릭: 포인터 락</div>
       </div>
     </div>
   );
-}
-
-// 맵 경계 표시 컴포넌트 (디버그용)
-function MapBoundaries() {
-  return (
-    <group>
-      {/* 복도 경계 표시 */}
-      <lineSegments>
-        <edgesGeometry>
-          <boxGeometry args={[6, 0.1, 30]} />
-        </edgesGeometry>
-        <lineBasicMaterial color="yellow" />
-      </lineSegments>
-    </group>
-  );
-}
-
-// 카메라가 플레이어를 따라가는 컴포넌트 (1인칭)
-function FollowCamera({ target }: { target: THREE.Vector3 }) {
-  const mouseRef = useRef({ x: 0, y: 0 });
-  
-  useEffect(() => {
-    const handleMouseMove = (event: MouseEvent) => {
-      const sensitivity = 0.002;
-      mouseRef.current.x += event.movementX * sensitivity;
-      mouseRef.current.y += event.movementY * sensitivity;
-      
-      // 수직 회전 제한
-      mouseRef.current.y = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, mouseRef.current.y));
-    };
-
-    const handleClick = () => {
-      document.body.requestPointerLock();
-    };
-
-    // 포인터 잠금 상태 변경 감지
-    const handlePointerLockChange = () => {
-      if (document.pointerLockElement) {
-        document.addEventListener('mousemove', handleMouseMove);
-      } else {
-        document.removeEventListener('mousemove', handleMouseMove);
-      }
-    };
-
-    document.addEventListener('pointerlockchange', handlePointerLockChange);
-    window.addEventListener('click', handleClick);
-
-    return () => {
-      document.removeEventListener('pointerlockchange', handlePointerLockChange);
-      document.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('click', handleClick);
-    };
-  }, []);
-  
-  useFrame(({ camera }) => {
-    // 카메라 위치를 플레이어 위치로 설정
-    camera.position.copy(target);
-    camera.position.y += 10.0; // 플레이어 눈 높이
-    
-    // 마우스 움직임에 따른 카메라 방향 설정
-    camera.rotation.x = 0; // 상하 회전 제한
-    camera.rotation.y = -mouseRef.current.x;
-  });
-  
-  return null;
 }

@@ -12,6 +12,7 @@
     "@react-three/drei": "^10.6.1",
     "@react-three/fiber": "^9.3.0",
     "@types/matter-js": "^0.19.8",
+    "axios": "^1.11.0",
     "framer-motion": "^11.0.0",
     "gltf-loader": "^1.0.0",
     "lucide-react": "^0.344.0",
