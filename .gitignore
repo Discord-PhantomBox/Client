@@ -39,3 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Large scene files that exceed GitHub limits
+public/wound/scene.bin
+public/nervous/scene.bin
+public/vulnerable/scene.bin
