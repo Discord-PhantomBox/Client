@@ -5,7 +5,10 @@ import { useGLTF, OrbitControls, Environment } from '@react-three/drei';
 import * as THREE from 'three';
 import { useAppStore } from '../lib/store';
 import { getSceneByEmotion } from '../lib/emotionMapper';
-import InteractiveAsset from './InteractiveAsset';
+import LocalAsset from './LocalAsset';
+import InteractionModal from './InteractionModal';
+import CompletionModal from './CompletionModal';
+import { AssetInfo, getAssetInfo } from '../lib/assetInfo';
 
 // 맵 크기 파악을 위한 컴포넌트
 function MapBounds({ onBoundsCalculated }: { onBoundsCalculated: (bounds: THREE.Box3) => void }) {
@@ -23,141 +26,17 @@ function MapBounds({ onBoundsCalculated }: { onBoundsCalculated: (bounds: THREE.
 
 // 감정에 따른 씬 로딩 컴포넌트
 function EmotionScene() {
-  const userExperience = useAppStore((state) => state.userExperience);
-  const analyzedEmotion = userExperience?.analyzedEmotion;
-  const preloadedEmotion = useAppStore((state) => state.preloadedEmotion);
-  
-  // 프리로딩된 감정이 있으면 우선 사용, 없으면 분석된 감정 사용
-  const currentEmotion = preloadedEmotion || analyzedEmotion;
-  
-  // 감정별 씬 매핑
-  const sceneMapping: Record<string, { path: string; rotation: number; position: [number, number, number] }> = {
-    '고립된': {
-      path: '/isolated/scene.gltf',
-      rotation: Math.PI / 2,
-      position: [0, 0, 0]
-    },
-    '배신당한': {
-      path: '/betrayed/scene.gltf',
-      rotation: Math.PI / 2,
-      position: [0, 0, 0]
-    },
-    '질투하는': {
-      path: '/jealous/scene.gltf',
-      rotation: Math.PI / 2,
-      position: [0, 0, 0]
-    },
-    '불안': {
-      path: '/nervous/scene.gltf',
-      rotation: Math.PI / 2,
-      position: [0, 0, 0]
-    },
-    '가난한, 불우한': {
-      path: '/poor/scene.gltf',
-      rotation: Math.PI / 2,
-      position: [0, 0, 0]
-    },
-    '회의적인': {
-      path: '/skeptical/scene.gltf',
-      rotation: Math.PI / 2,
-      position: [0, 0, 0]
-    },
-    '취약한': {
-      path: '/vulnerable/scene.gltf',
-      rotation: Math.PI / 2,
-      position: [0, 0, 0]
-    },
-    '상처': {
-      path: '/wound/scene.gltf',
-      rotation: Math.PI / 2,
-      position: [0, 0, 0]
-    },
-    '희생된': {
-      path: '/sacrificed/scene.gltf',
-      rotation: Math.PI / 2,
-      position: [0, 0, 0]
-    },
-    '혼란스러운': {
-      path: '/confused/scene.gltf',
-      rotation: Math.PI / 2,
-      position: [0, 0, 0]
-    },
-    '초조한': {
-      path: '/unrest/scene.gltf',
-      rotation: Math.PI / 2,
-      position: [0, 0, 0]
-    },
-    // 누락된 감정들 추가
-    '걱정스러운': {
-      path: '/nervous/scene.gltf', // 걱정스러운은 불안과 유사하므로 nervous 씬 사용
-      rotation: Math.PI / 2,
-      position: [0, 0, 0]
-    },
-    '괴로워하는': {
-      path: '/wound/scene.gltf', // 괴로움은 상처와 유사하므로 wound 씬 사용
-      rotation: Math.PI / 2,
-      position: [0, 0, 0]
-    },
-    '당혹스러운': {
-      path: '/confused/scene.gltf', // 당혹스러운은 혼란스러운과 유사하므로 confused 씬 사용
-      rotation: Math.PI / 2,
-      position: [0, 0, 0]
-    },
-    '두려운': {
-      path: '/nervous/scene.gltf', // 두려운은 불안과 유사하므로 nervous 씬 사용
-      rotation: Math.PI / 2,
-      position: [0, 0, 0]
-    },
-    '버려진': {
-      path: '/isolated/scene.gltf', // 버려진은 고립된과 유사하므로 isolated 씬 사용
-      rotation: Math.PI / 2,
-      position: [0, 0, 0]
-    },
-    '스트레스 받는': {
-      path: '/nervous/scene.gltf', // 스트레스 받는은 불안과 유사하므로 nervous 씬 사용
-      rotation: Math.PI / 2,
-      position: [0, 0, 0]
-    },
-    '억울한': {
-      path: '/wound/scene.gltf', // 억울한은 상처와 유사하므로 wound 씬 사용
-      rotation: Math.PI / 2,
-      position: [0, 0, 0]
-    },
-    '조심스러운': {
-      path: '/skeptical/scene.gltf', // 조심스러운은 회의적인과 유사하므로 skeptical 씬 사용
-      rotation: Math.PI / 2,
-      position: [0, 0, 0]
-    },
-    '충격 받은': {
-      path: '/confused/scene.gltf', // 충격 받은은 혼란스러운과 유사하므로 confused 씬 사용
-      rotation: Math.PI / 2,
-      position: [0, 0, 0]
-    }
-  };
-  
-  // 감정에 따른 씬 로딩
-  if (currentEmotion && sceneMapping[currentEmotion]) {
-    const sceneConfig = sceneMapping[currentEmotion];
-    const { scene } = useGLTF(sceneConfig.path);
-    
-    useEffect(() => {
-      // 모델을 설정된 회전값으로 회전
-      scene.rotation.y = sceneConfig.rotation;
-      scene.position.set(...sceneConfig.position);
-    }, [scene, sceneConfig]);
-
-    return <primitive object={scene} />;
-  }
-  
-  // 기본 building_hallway 씬 (매핑되지 않은 감정이거나 감정이 없을 때)
+  // 기본 building_hallway 맵만 로딩
   const { scene } = useGLTF('/building_hallway/scene.gltf');
   
   useEffect(() => {
-    // 모델을 90도 회전
-    scene.rotation.y = Math.PI / 2;
+    if (scene) {
+      console.log('Map loaded successfully');
+      scene.rotation.y = Math.PI / 2;
+    }
   }, [scene]);
-
-  return <primitive object={scene} />;
+  
+  return scene ? <primitive object={scene} /> : null;
 }
 
 function Player({ position, velocity }: { position: THREE.Vector3; velocity: THREE.Vector3 }) {
@@ -181,30 +60,30 @@ function FollowCamera({
   const { camera } = useThree();
   
   useEffect(() => {
-    // 맵별 카메라 설정 적용
-    const cameraHeight = Math.max(playerPosition.y + cameraSettings.height, cameraSettings.height);
+    // 카메라 높이를 플레이어와 같은 높이로 설정
+    const cameraHeight = playerPosition.y; // 플레이어와 같은 높이
     const cameraDistance = cameraSettings.distance;
     
-    // 마우스 회전에 따른 카메라 위치 계산
+    // 마우스 회전에 따른 카메라 위치 계산 (수평 + 수직)
     const horizontalAngle = mousePosition.x;
-    const verticalAngle = Math.max(-0.5, Math.min(0.5, mousePosition.y)); // 수직 회전 제한
+    const verticalAngle = mousePosition.y; // 수직 회전 활성화
     
     const cosH = Math.cos(horizontalAngle);
     const sinH = Math.sin(horizontalAngle);
     const cosV = Math.cos(verticalAngle);
     const sinV = Math.sin(verticalAngle);
     
-    // 카메라 위치 계산 (수평 + 수직 회전 적용)
+    // 카메라 위치 계산 - 플레이어 뒤쪽에서
     camera.position.set(
       playerPosition.x - cameraDistance * sinH * cosV,
-      cameraHeight + cameraDistance * sinV,
+      cameraHeight + cameraDistance * sinV, // 수직 회전에 따른 높이 변화
       playerPosition.z - cameraDistance * cosH * cosV
     );
     
-    // 플레이어를 바라보되 약간 위쪽을 보도록 설정
+    // 플레이어를 바라보도록 설정
     camera.lookAt(
       playerPosition.x,
-      playerPosition.y + 2, // 플레이어 머리 높이
+      playerPosition.y,
       playerPosition.z
     );
   }, [camera, playerPosition, mousePosition, cameraSettings]);
@@ -221,11 +100,11 @@ function EmotionBasedLighting() {
 
   return (
     <>
-      {/* 기본 조명 */}
-      <ambientLight intensity={0.1} />
+      {/* 기본 조명 - 더 어둡게 */}
+      <ambientLight intensity={0.05} />
       <directionalLight 
         position={[10, 10, 5]} 
-        intensity={0.3} 
+        intensity={0.1} 
         castShadow 
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}
@@ -234,37 +113,46 @@ function EmotionBasedLighting() {
       {/* 감정 기반 동적 조명 */}
       {sceneConfig && (
         <>
-          {/* 감정 색상 기반 포인트 라이트 */}
+          {/* 감정 색상 기반 포인트 라이트 - 더 어둡게 */}
           <pointLight
             position={[0, 5, 0]}
-            intensity={sceneConfig.particles / 20}
-            color={sceneConfig.color}
-            distance={20}
-          />
-          
-          {/* 추가 분위기 조명 */}
-          <pointLight
-            position={[10, 3, 10]}
-            intensity={0.5}
+            intensity={sceneConfig.particles / 50}
             color={sceneConfig.color}
             distance={15}
+          />
+          
+          {/* 추가 분위기 조명 - 더 어둡게 */}
+          <pointLight
+            position={[10, 3, 10]}
+            intensity={0.2}
+            color={sceneConfig.color}
+            distance={12}
           />
           
           <pointLight
             position={[-10, 3, -10]}
-            intensity={0.3}
+            intensity={0.1}
             color={sceneConfig.color}
-            distance={15}
+            distance={12}
+          />
+          
+          {/* 깜빡이는 조명 효과 */}
+          <pointLight
+            position={[0, 8, 0]}
+            intensity={0.05}
+            color="#ff0000"
+            distance={8}
           />
         </>
       )}
       
-      {/* 기본 폐병원 조명 (감정 분석이 없는 경우) */}
+      {/* 기본 폐병원 조명 (감정 분석이 없는 경우) - 더 무섭게 */}
       {!sceneConfig && (
         <>
-          <pointLight position={[0, 5, 0]} intensity={0.8} color="#8b0000" distance={20} />
-          <pointLight position={[10, 3, 10]} intensity={0.5} color="#4a4a4a" distance={15} />
-          <pointLight position={[-10, 3, -10]} intensity={0.3} color="#2a2a2a" distance={15} />
+          <pointLight position={[0, 5, 0]} intensity={0.3} color="#8b0000" distance={15} />
+          <pointLight position={[10, 3, 10]} intensity={0.2} color="#4a4a4a" distance={12} />
+          <pointLight position={[-10, 3, -10]} intensity={0.1} color="#2a2a2a" distance={12} />
+          <pointLight position={[0, 8, 0]} intensity={0.05} color="#ff0000" distance={8} />
         </>
       )}
     </>
@@ -354,10 +242,10 @@ function PlayerMovement({
     // 키보드 입력 처리
     const moveVector = new THREE.Vector3();
     
-    if (keys.has('KeyW')) moveVector.z += 1; // 앞으로
-    if (keys.has('KeyS')) moveVector.z -= 1; // 뒤로
-    if (keys.has('KeyA')) moveVector.x -= 1; // 왼쪽
-    if (keys.has('KeyD')) moveVector.x += 1; // 오른쪽
+    if (keys.has('KeyW')) moveVector.z += 1; // 앞으로 (음수)
+    if (keys.has('KeyS')) moveVector.z -= 1; // 뒤로 (양수)
+    if (keys.has('KeyA')) moveVector.x += 1; // 왼쪽
+    if (keys.has('KeyD')) moveVector.x -= 1; // 오른쪽
     
     // 카메라 방향에 따른 이동
     if (moveVector.length() > 0) {
@@ -370,9 +258,9 @@ function PlayerMovement({
       const sin = Math.sin(angle);
       
       const adjustedMoveVector = new THREE.Vector3(
-        moveVector.x * cos - moveVector.z * sin,
+        moveVector.x * cos + moveVector.z * sin,  // 부호 변경
         0,
-        moveVector.x * sin + moveVector.z * cos
+        -moveVector.x * sin + moveVector.z * cos  // 부호 변경
       );
       
       newPosition.add(adjustedMoveVector);
@@ -411,148 +299,101 @@ function PlayerMovement({
 
 export default function SceneViewer() {
   const userExperience = useAppStore((state) => state.userExperience);
-  const analyzedEmotion = userExperience?.analyzedEmotion;
-  const preloadedEmotion = useAppStore((state) => state.preloadedEmotion);
-  const isPreloading = useAppStore((state) => state.isPreloading);
   const mapBounds = useAppStore((state) => state.mapBounds);
   const setMapBounds = useAppStore((state) => state.setMapBounds);
   
-  // 프리로딩된 감정이 있으면 우선 사용, 없으면 분석된 감정 사용
-  const currentEmotion = preloadedEmotion || analyzedEmotion;
-  
-  // 맵 크기 파악 콜백
-  const handleBoundsCalculated = (bounds: THREE.Box3) => {
-    setMapBounds(bounds);
-    console.log('Map bounds:', {
-      min: bounds.min,
-      max: bounds.max,
-      size: bounds.getSize(new THREE.Vector3()),
-      center: bounds.getCenter(new THREE.Vector3())
-    });
-  };
-
-  // 에셋 상호작용 처리
-  const handleAssetInteraction = () => {
-    console.log('Asset interacted!');
-    // 여기에 상호작용 로직 추가
-  };
-
-  // 감정별 플레이어 시작 위치 설정
-  const getPlayerStartPosition = () => {
-    switch (currentEmotion) {
-      case '고립된':
-        return new THREE.Vector3(0, 2, 0); // isolated 씬 - 작은 방
-      case '배신당한':
-        return new THREE.Vector3(0, 2, 0); // betrayed 씬 - 좁은 공간
-      case '질투하는':
-        return new THREE.Vector3(0, 2, 0); // jealous 씬 - 밀폐된 공간
-      case '불안':
-        return new THREE.Vector3(0, 2, 0); // nervous 씬 - 긴 복도
-      case '가난한, 불우한':
-        return new THREE.Vector3(0, 2, 0); // poor 씬 - 작은 방
-      case '회의적인':
-        return new THREE.Vector3(0, 2, 0); // skeptical 씬 - 의심스러운 공간
-      case '취약한':
-        return new THREE.Vector3(0, 2, 0); // vulnerable 씬 - 열린 공간
-      case '상처':
-        return new THREE.Vector3(0, 2, 0); // wound 씬 - 상처받은 공간
-      case '희생된':
-        return new THREE.Vector3(0, 2, 0); // sacrificed 씬 - 제단
-      case '혼란스러운':
-        return new THREE.Vector3(0, 2, 0); // confused 씬 - 미로
-      case '초조한':
-        return new THREE.Vector3(0, 2, 0); // unrest 씬 - 불안한 공간
-      // 누락된 감정들 추가
-      case '걱정스러운':
-        return new THREE.Vector3(0, 2, 0); // nervous 씬과 동일
-      case '괴로워하는':
-        return new THREE.Vector3(0, 2, 0); // wound 씬과 동일
-      case '당혹스러운':
-        return new THREE.Vector3(0, 2, 0); // confused 씬과 동일
-      case '두려운':
-        return new THREE.Vector3(0, 2, 0); // nervous 씬과 동일
-      case '버려진':
-        return new THREE.Vector3(0, 2, 0); // isolated 씬과 동일
-      case '스트레스 받는':
-        return new THREE.Vector3(0, 2, 0); // nervous 씬과 동일
-      case '억울한':
-        return new THREE.Vector3(0, 2, 0); // wound 씬과 동일
-      case '조심스러운':
-        return new THREE.Vector3(0, 2, 0); // skeptical 씬과 동일
-      case '충격 받은':
-        return new THREE.Vector3(0, 2, 0); // confused 씬과 동일
-      default:
-        return new THREE.Vector3(5.23, 45, 518.87); // 기본 building_hallway 위치
-    }
-  };
-
-  // 맵별 카메라 설정
-  const getCameraSettings = () => {
-    switch (currentEmotion) {
-      case '고립된':
-        return { height: 6, distance: 8 }; // 작은 방 - 가까운 시점
-      case '배신당한':
-        return { height: 8, distance: 10 }; // 좁은 공간 - 중간 시점
-      case '질투하는':
-        return { height: 7, distance: 9 }; // 밀폐된 공간
-      case '불안':
-        return { height: 10, distance: 15 }; // 긴 복도 - 넓은 시점
-      case '가난한, 불우한':
-        return { height: 5, distance: 7 }; // 작은 방 - 가까운 시점
-      case '회의적인':
-        return { height: 8, distance: 12 }; // 의심스러운 공간
-      case '취약한':
-        return { height: 12, distance: 18 }; // 열린 공간 - 넓은 시점
-      case '상처':
-        return { height: 6, distance: 8 }; // 상처받은 공간
-      case '희생된':
-        return { height: 9, distance: 11 }; // 제단
-      case '혼란스러운':
-        return { height: 8, distance: 10 }; // 미로
-      case '초조한':
-        return { height: 7, distance: 9 }; // 불안한 공간
-      // 누락된 감정들
-      case '걱정스러운':
-        return { height: 10, distance: 15 }; // nervous 씬과 동일
-      case '괴로워하는':
-        return { height: 6, distance: 8 }; // wound 씬과 동일
-      case '당혹스러운':
-        return { height: 8, distance: 10 }; // confused 씬과 동일
-      case '두려운':
-        return { height: 10, distance: 15 }; // nervous 씬과 동일
-      case '버려진':
-        return { height: 6, distance: 8 }; // isolated 씬과 동일
-      case '스트레스 받는':
-        return { height: 10, distance: 15 }; // nervous 씬과 동일
-      case '억울한':
-        return { height: 6, distance: 8 }; // wound 씬과 동일
-      case '조심스러운':
-        return { height: 8, distance: 12 }; // skeptical 씬과 동일
-      case '충격 받은':
-        return { height: 8, distance: 10 }; // confused 씬과 동일
-      default:
-        return { height: 10, distance: 12 }; // 기본 설정
-    }
-  };
-  
-  const [playerPosition, setPlayerPosition] = useState(getPlayerStartPosition());
-  const [velocity, setVelocity] = useState(new THREE.Vector3());
+  // 플레이어 상태
+  const [playerPosition, setPlayerPosition] = useState<THREE.Vector3>(new THREE.Vector3(0, 45, 0));
+  const [velocity, setVelocity] = useState<THREE.Vector3>(new THREE.Vector3());
   const [keys, setKeys] = useState<Set<string>>(new Set());
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [isPointerLocked, setIsPointerLocked] = useState(false);
   
-  const sceneConfig = currentEmotion ? 
-    getSceneByEmotion(currentEmotion as any, userExperience?.intensity || 5) : null;
+  // 상호작용 상태
+  const [isInteractionModalOpen, setIsInteractionModalOpen] = useState(false);
+  const [currentAssetInfo, setCurrentAssetInfo] = useState<AssetInfo | null>(null);
+  const [collectedAssets, setCollectedAssets] = useState<Set<string>>(new Set());
+  const [isCompletionModalOpen, setIsCompletionModalOpen] = useState(false);
 
+  // 맵 크기 파악 콜백
+  const handleBoundsCalculated = (bounds: THREE.Box3) => {
+    //console.log('Map bounds calculated:', bounds);
+    setMapBounds(bounds);
+  };
+
+  // 에셋 상호작용 처리
+  const handleAssetInteraction = () => {
+    console.log('Asset interaction triggered');
+  };
+
+  const handleShowModal = (assetInfo: AssetInfo) => {
+    setCurrentAssetInfo(assetInfo);
+    setIsInteractionModalOpen(true);
+    
+    // 모달이 열릴 때 마우스 잠금 해제
+    document.exitPointerLock();
+  };
+
+  const handleCollectAsset = () => {
+    if (currentAssetInfo) {
+      setCollectedAssets(prev => new Set([...prev, currentAssetInfo.id]));
+      setIsInteractionModalOpen(false);
+      
+      // 모달 닫을 때 마우스 락 다시 활성화
+      const canvas = document.querySelector('canvas');
+      if (canvas) {
+        canvas.requestPointerLock();
+      }
+      
+      // 모든 에셋을 수집했는지 확인
+      const allAssets = ['broken_mirror', 'medieval_water_tub', 'wooden_ladder'];
+      const newCollected = new Set([...collectedAssets, currentAssetInfo.id]);
+      
+      if (allAssets.every(asset => newCollected.has(asset))) {
+        setIsCompletionModalOpen(true);
+      }
+    }
+  };
+
+  const handleCloseModal = () => {
+    setIsInteractionModalOpen(false);
+    
+    // 모달 닫을 때 마우스 락 다시 활성화
+    const canvas = document.querySelector('canvas');
+    if (canvas) {
+      canvas.requestPointerLock();
+    }
+  };
+
+  const handleGoHome = () => {
+    window.location.href = '/';
+  };
+
+  // 플레이어 시작 위치
+  const getPlayerStartPosition = () => {
+    return new THREE.Vector3(0, 45, 0);
+  };
+
+  // 카메라 설정
+  const getCameraSettings = () => {
+    return { height: 3, distance: 8 };
+  };
+  
   // 감정이 변경되면 플레이어 위치 재설정
   useEffect(() => {
     setPlayerPosition(getPlayerStartPosition());
-  }, [currentEmotion]);
+  }, []);
 
   // 키보드 이벤트
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      setKeys(prev => new Set(prev).add(e.code));
+      setKeys(prev => new Set([...prev, e.code]));
+      
+      // Tab키로 마우스 고정 해제
+      if (e.code === 'Tab') {
+        e.preventDefault();
+        document.exitPointerLock();
+      }
     };
     
     const handleKeyUp = (e: KeyboardEvent) => {
@@ -570,15 +411,15 @@ export default function SceneViewer() {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, []);
+  }, [playerPosition, collectedAssets]); // playerPosition과 collectedAssets를 의존성 배열에 추가
 
   // 마우스 이벤트
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (isPointerLocked) {
         setMousePosition(prev => ({
-          x: prev.x - e.movementX * 0.002, // 방향 반전
-          y: prev.y - e.movementY * 0.002  // 방향 반전
+          x: prev.x - e.movementX * 0.002,
+          y: prev.y - e.movementY * 0.002  // 수직 회전 활성화
         }));
       }
     };
@@ -607,166 +448,64 @@ export default function SceneViewer() {
   return (
     <div className="w-full h-screen relative">
       {/* 감정 메시지 표시 */}
-      {sceneConfig && (
-        <div className="absolute top-4 left-4 z-10 bg-black/60 backdrop-blur-md border border-gray-700/50 rounded-lg p-4 text-white font-mono">
-          <h3 className="text-lg font-bold mb-2">{sceneConfig.name}</h3>
-          <p className="text-sm text-gray-300">{sceneConfig.message}</p>
-        </div>
-      )}
-      
-      {/* 좌표 디버그 */}
-      <div className="absolute top-4 right-4 z-10 bg-black/60 backdrop-blur-md border border-gray-700/50 rounded-lg p-4 text-white font-mono text-sm">
-        <div>X: {playerPosition.x.toFixed(2)}</div>
-        <div>Y: {playerPosition.y.toFixed(2)}</div>
-        <div>Z: {playerPosition.z.toFixed(2)}</div>
-        {sceneConfig && (
+      {/* 디버그 정보 */}
+      <div className="absolute top-4 right-4 z-10 bg-black/80 backdrop-blur-md border border-gray-700/50 rounded-lg p-4 text-white font-mono text-xs shadow-2xl">
+        <div className="text-gray-400">현재 감정: {userExperience?.analyzedEmotion || '없음'}</div>
+        <div className="text-gray-400">X: {playerPosition.x.toFixed(2)}</div>
+        <div className="text-gray-400">Y: {playerPosition.y.toFixed(2)}</div>
+        <div className="text-gray-400">Z: {playerPosition.z.toFixed(2)}</div>
+        <div className="text-gray-400">수집된 에셋: {collectedAssets.size}/3</div>
+        {userExperience?.analyzedEmotion && (
           <div className="mt-2 text-red-400">
-            감정: {userExperience?.analyzedEmotion}
-          </div>
-        )}
-        {currentEmotion && (
-          <div className="mt-2 text-green-400">
-            로딩된 씬: {currentEmotion}
-          </div>
-        )}
-        {isPreloading && (
-          <div className="mt-2 text-blue-400">
-            프리로딩 중...
+            감정: {userExperience.analyzedEmotion}
           </div>
         )}
         {mapBounds && (
-          <div className="mt-2 text-yellow-400">
-            맵 크기: {mapBounds.getSize(new THREE.Vector3()).toArray().map(v => v.toFixed(1)).join(' x ')}
-            <br />
-            맵 범위: X({mapBounds.min.x.toFixed(1)} ~ {mapBounds.max.x.toFixed(1)}) 
-            Z({mapBounds.min.z.toFixed(1)} ~ {mapBounds.max.z.toFixed(1)})
-            <br />
-            배치 모드: {mapBounds.getSize(new THREE.Vector3()).x < 50 || mapBounds.getSize(new THREE.Vector3()).z < 50 ? '고정 위치' : '동적 배치'}
-            <br />
-            카메라 설정: 높이 {getCameraSettings().height}, 거리 {getCameraSettings().distance}
+          <div className="mt-2 text-blue-400">
+            맵 크기: {Math.max(
+              mapBounds.max.x - mapBounds.min.x,
+              mapBounds.max.z - mapBounds.min.z
+            ).toFixed(1)}
           </div>
         )}
       </div>
       
-      <Canvas
-        shadows
-        camera={{ position: [0, 10, 5], fov: 75 }}
-        onClick={handleCanvasClick}
-        className="cursor-crosshair"
-      >
+      <Canvas shadows camera={{ position: [0, 10, 5], fov: 75 }} onClick={handleCanvasClick} className="cursor-crosshair" style={{ background: '#000000' }}>
         <MapBounds onBoundsCalculated={handleBoundsCalculated} />
         <EmotionBasedLighting />
         <EmotionParticles />
-        
         <EmotionScene />
         <Player position={playerPosition} velocity={velocity} />
-        <FollowCamera 
-          playerPosition={playerPosition} 
-          mousePosition={mousePosition}
-          cameraSettings={getCameraSettings()}
+        <FollowCamera playerPosition={playerPosition} mousePosition={mousePosition} cameraSettings={getCameraSettings()} />
+        
+        {/* 로컬 에셋 배치 */}
+        <LocalAsset 
+          assetId="broken_mirror" 
+          position={[73, 45, 0]} 
+          scale={[15, 15, 15]}
+          rotation={[0, -90, 0]}
+          playerPosition={playerPosition}
+          onShowModal={collectedAssets.has('broken_mirror') ? undefined : handleShowModal}
+          onInteraction={handleAssetInteraction} 
         />
         
-        {/* 상호작용 가능한 에셋들 */}
-        {mapBounds ? (
-          <>
-            {/* 맵 크기에 따른 동적 배치 */}
-            {(() => {
-              const mapSize = mapBounds.getSize(new THREE.Vector3());
-              const mapCenter = mapBounds.getCenter(new THREE.Vector3());
-              
-              // 맵이 너무 작으면 고정 위치 사용 (임계값을 더 낮게 조정)
-              if (mapSize.x < 50 || mapSize.z < 50) {
-                return (
-                  <>
-                    {/* 고정 위치 에셋들 - 더 작은 크기로 조정 */}
-                    <InteractiveAsset
-                      position={[5, 1, 0]}
-                      rotation={[0, Math.PI, 0]}
-                      scale={[0.2, 0.2, 0.2]}
-                      assetId="1"
-                      onInteraction={handleAssetInteraction}
-                    />
-                    
-                    <InteractiveAsset
-                      position={[-5, 1, 0]}
-                      rotation={[0, 0, 0]}
-                      scale={[0.2, 0.2, 0.2]}
-                      assetId="1"
-                      onInteraction={handleAssetInteraction}
-                    />
-                    
-                    <InteractiveAsset
-                      position={[0, 1, 5]}
-                      rotation={[0, Math.PI / 2, 0]}
-                      scale={[0.2, 0.2, 0.2]}
-                      assetId="1"
-                      onInteraction={handleAssetInteraction}
-                    />
-                  </>
-                );
-              }
-              
-              // 맵이 충분히 크면 동적 배치
-              return (
-                <>
-                  {/* 벽에 붙은 거울 에셋 */}
-                  <InteractiveAsset
-                    position={[mapBounds.max.x - 5, mapBounds.max.y - 2, mapCenter.z]}
-                    rotation={[0, Math.PI, 0]}
-                    scale={[0.5, 0.5, 0.5]}
-                    assetId="1"
-                    onInteraction={handleAssetInteraction}
-                  />
-                  
-                  {/* 다른 위치의 에셋들 */}
-                  <InteractiveAsset
-                    position={[mapBounds.min.x + 5, mapBounds.max.y - 2, mapCenter.z]}
-                    rotation={[0, 0, 0]}
-                    scale={[0.5, 0.5, 0.5]}
-                    assetId="1"
-                    onInteraction={handleAssetInteraction}
-                  />
-                  
-                  {/* 추가 에셋들 */}
-                  <InteractiveAsset
-                    position={[mapCenter.x, mapBounds.max.y - 2, mapBounds.max.z - 5]}
-                    rotation={[0, Math.PI / 2, 0]}
-                    scale={[0.5, 0.5, 0.5]}
-                    assetId="1"
-                    onInteraction={handleAssetInteraction}
-                  />
-                </>
-              );
-            })()}
-          </>
-        ) : (
-          // 맵 크기가 아직 계산되지 않았을 때 기본 에셋들
-          <>
-            <InteractiveAsset
-              position={[5, 1, 0]}
-              rotation={[0, Math.PI, 0]}
-              scale={[0.2, 0.2, 0.2]}
-              assetId="1"
-              onInteraction={handleAssetInteraction}
-            />
-            
-            <InteractiveAsset
-              position={[-5, 1, 0]}
-              rotation={[0, 0, 0]}
-              scale={[0.2, 0.2, 0.2]}
-              assetId="1"
-              onInteraction={handleAssetInteraction}
-            />
-            
-            <InteractiveAsset
-              position={[0, 1, 5]}
-              rotation={[0, Math.PI / 2, 0]}
-              scale={[0.2, 0.2, 0.2]}
-              assetId="1"
-              onInteraction={handleAssetInteraction}
-            />
-          </>
-        )}
+        <LocalAsset 
+          assetId="medieval_water_tub" 
+          position={[-10, 3, 50]} 
+          scale={[15, 15, 15]}
+          playerPosition={playerPosition}
+          onShowModal={collectedAssets.has('medieval_water_tub') ? undefined : handleShowModal}
+          onInteraction={handleAssetInteraction} 
+        />
+        
+        <LocalAsset 
+          assetId="wooden_ladder" 
+          position={[-70, 100, 15]} 
+          rotation={[0, 90, 0]}
+          playerPosition={playerPosition}
+          onShowModal={collectedAssets.has('wooden_ladder') ? undefined : handleShowModal}
+          onInteraction={handleAssetInteraction} 
+        />
         
         {/* 플레이어 이동 로직 */}
         <PlayerMovement 
@@ -779,24 +518,37 @@ export default function SceneViewer() {
           getPlayerStartPosition={getPlayerStartPosition}
         />
         
-        {/* 바닥 - 감정이 없을 때만 표시 */}
-        {!currentEmotion && (
-          <mesh position={[0, 39, 0]} receiveShadow>
-            <planeGeometry args={[1000, 1000]} />
-            <meshStandardMaterial color="#2a2a2a" />
-          </mesh>
-        )}
+        {/* 바닥 */}
+        <mesh position={[0, 39, 0]} receiveShadow>
+          <planeGeometry args={[1000, 1000]} />
+          <meshStandardMaterial color="#1a1a1a" />
+        </mesh>
         
         <Environment preset="night" />
       </Canvas>
       
       {/* 조작 가이드 */}
-      <div className="absolute bottom-4 left-4 z-10 bg-black/60 backdrop-blur-md border border-gray-700/50 rounded-lg p-4 text-white font-mono text-sm">
-        <div>WASD: 이동</div>
-        <div>Space: 점프</div>
-        <div>마우스: 시점</div>
-        <div>클릭: 포인터 락</div>
+      <div className="absolute bottom-4 left-4 z-10 bg-black/80 backdrop-blur-md border border-gray-800/50 rounded-lg p-4 text-white font-mono text-sm shadow-2xl">
+        <div className="text-gray-400">WASD: 이동</div>
+        <div className="text-gray-400">Space: 점프</div>
+        <div className="text-gray-400">마우스: 시점</div>
+        <div className="text-gray-400">클릭: 포인터 락</div>
+        <div className="text-gray-400">Tab: 마우스 고정 해제</div>
       </div>
+      
+      {/* 상호작용 모달 */}
+      <InteractionModal
+        isOpen={isInteractionModalOpen}
+        onClose={handleCloseModal}
+        assetInfo={currentAssetInfo}
+        onCollect={handleCollectAsset}
+      />
+      
+      {/* 완료 모달 */}
+      <CompletionModal
+        isOpen={isCompletionModalOpen}
+        onGoHome={handleGoHome}
+      />
     </div>
   );
 }

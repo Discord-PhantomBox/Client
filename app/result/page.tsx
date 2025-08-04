@@ -130,9 +130,9 @@ function ResultContent() {
             transition={{ delay: 0.8 }}
             className="mt-8 flex flex-col sm:flex-row gap-4 justify-center"
           >
-            <CTAButton onClick={handleRestart} variant="primary">
+            {/* <CTAButton onClick={handleRestart} variant="primary">
               다시 시작하기
-            </CTAButton>
+            </CTAButton> */}
             <CTAButton href="/" variant="secondary" icon="arrow-left">
               공포와 마주하기
             </CTAButton>

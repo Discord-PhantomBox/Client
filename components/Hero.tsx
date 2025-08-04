@@ -310,7 +310,7 @@ export default function Hero() {
               >
                 <h3 className="text-xl font-bold text-white mb-4 font-mono">심리학팀</h3>
                 <p className="text-gray-300 font-mono">
-                  전문 심리학자들이 참여하여 안전하고 효과적인 치료 경험을 설계합니다.
+                  디자이너, 개발자 전공자들이 AI를 통해 수백가지 논문을 읽고 참여하여 안전하고 효과적인 치료 경험을 설계합니다.
                 </p>
               </motion.div>
             </div>
@@ -334,17 +334,17 @@ export default function Hero() {
                 {
                   title: "기술 지원",
                   description: "기술적 문제나 버그 신고",
-                  contact: "support@phantombox.com"
+                  contact: "chohamin0611@gmail.com"
                 },
                 {
                   title: "심리 상담",
                   description: "치료 관련 문의 및 상담",
-                  contact: "therapy@phantombox.com"
+                  contact: "chohamin0611@gmail.com"
                 },
                 {
                   title: "일반 문의",
                   description: "기타 문의사항",
-                  contact: "info@phantombox.com"
+                  contact: "chohamin0611@gmail.com"
                 }
               ].map((item, index) => (
                 <motion.div
